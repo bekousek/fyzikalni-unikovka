@@ -25,10 +25,12 @@ function decodeRoom(str) {
 
 // ====== AUTH ======
 let currentUser = null;
+let guestMode = false;
 
 auth.onAuthStateChanged(user => {
     currentUser = user;
     if (user) {
+        guestMode = false;
         updateUserUI(user);
     }
     route();
@@ -42,18 +44,36 @@ function signInWithGoogle() {
     });
 }
 
+function continueAsGuest() {
+    guestMode = true;
+    currentUser = null;
+    route();
+}
+
 function signOut() {
+    guestMode = false;
     auth.signOut();
+}
+
+function isLoggedIn() {
+    return currentUser || guestMode;
 }
 
 function updateUserUI(user) {
     const el = document.getElementById('user-info');
     if (!el) return;
-    el.innerHTML = `
-        <img class="user-avatar" src="${user.photoURL || ''}" alt="" referrerpolicy="no-referrer">
-        <span class="user-name">${escapeHtml(user.displayName || user.email)}</span>
-        <button class="btn-logout" onclick="signOut()">Odhlásit</button>
-    `;
+    if (guestMode) {
+        el.innerHTML = `
+            <span class="user-name">Bez přihlášení</span>
+            <button class="btn-logout" onclick="signInWithGoogle()">Přihlásit se</button>
+        `;
+    } else if (user) {
+        el.innerHTML = `
+            <img class="user-avatar" src="${user.photoURL || ''}" alt="" referrerpolicy="no-referrer">
+            <span class="user-name">${escapeHtml(user.displayName || user.email)}</span>
+            <button class="btn-logout" onclick="signOut()">Odhlásit</button>
+        `;
+    }
 }
 
 // ====== FIRESTORE HELPERS ======
@@ -118,7 +138,7 @@ function route() {
         return;
     }
 
-    if (!currentUser) {
+    if (!isLoggedIn()) {
         document.getElementById('screen-login').classList.add('active');
         return;
     }
@@ -140,6 +160,7 @@ window.addEventListener('hashchange', route);
 // ====== DASHBOARD ======
 function showDashboard() {
     document.getElementById('screen-dashboard').classList.add('active');
+    updateUserUI(currentUser);
     renderRoomsList();
 }
 
@@ -150,6 +171,15 @@ async function renderRoomsList() {
 
     list.style.display = 'none';
     empty.style.display = 'none';
+    loading.style.display = 'none';
+
+    if (guestMode) {
+        empty.style.display = 'block';
+        empty.querySelector('h2').textContent = 'Režim bez přihlášení';
+        empty.querySelector('p').textContent = 'Vytvořené únikovky se neukládají. Pro uložení se přihlaste Google účtem.';
+        return;
+    }
+
     loading.style.display = 'block';
 
     try {
@@ -235,7 +265,7 @@ let editorState = {
 async function showEditor(editDocId) {
     document.getElementById('screen-editor').classList.add('active');
 
-    if (editDocId) {
+    if (editDocId && !guestMode && currentUser) {
         try {
             const doc = await roomsCollection().doc(editDocId).get();
             if (doc.exists) {
@@ -451,11 +481,13 @@ async function generateRoom() {
     };
 
     try {
-        await saveRoom({
-            id: editorState.editingId,
-            config,
-            theme: editorState.theme
-        });
+        if (!guestMode && currentUser) {
+            await saveRoom({
+                id: editorState.editingId,
+                config,
+                theme: editorState.theme
+            });
+        }
 
         const url = buildShareUrl(config);
         document.getElementById('share-url').value = url;
