@@ -1,4 +1,11 @@
-// ====== ENCODING / DECODING ======
+// ====== FIREBASE CONFIG ======
+const firebaseConfig = FIREBASE_CONFIG;
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ====== ENCODING / DECODING (for share URLs) ======
 function encodeRoom(config) {
     const json = JSON.stringify(config);
     const utf8 = new TextEncoder().encode(json);
@@ -16,20 +23,73 @@ function decodeRoom(str) {
     return JSON.parse(new TextDecoder().decode(utf8));
 }
 
-// ====== LOCAL STORAGE ======
-function getRooms() {
-    try { return JSON.parse(localStorage.getItem('unikovka_rooms') || '[]'); }
-    catch { return []; }
+// ====== AUTH ======
+let currentUser = null;
+
+auth.onAuthStateChanged(user => {
+    currentUser = user;
+    if (user) {
+        updateUserUI(user);
+    }
+    route();
+});
+
+function signInWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(err => {
+        console.error('Sign-in error:', err);
+        alert('Přihlášení se nezdařilo. Zkuste to znovu.');
+    });
 }
 
-function saveRooms(rooms) {
-    localStorage.setItem('unikovka_rooms', JSON.stringify(rooms));
+function signOut() {
+    auth.signOut();
 }
 
-function getNextNumber() {
-    const rooms = getRooms();
-    if (rooms.length === 0) return 1;
-    return Math.max(...rooms.map(r => r.number || 0)) + 1;
+function updateUserUI(user) {
+    const el = document.getElementById('user-info');
+    if (!el) return;
+    el.innerHTML = `
+        <img class="user-avatar" src="${user.photoURL || ''}" alt="" referrerpolicy="no-referrer">
+        <span class="user-name">${escapeHtml(user.displayName || user.email)}</span>
+        <button class="btn-logout" onclick="signOut()">Odhlásit</button>
+    `;
+}
+
+// ====== FIRESTORE HELPERS ======
+function roomsCollection() {
+    return db.collection('users').doc(currentUser.uid).collection('rooms');
+}
+
+async function loadRooms() {
+    const snap = await roomsCollection().orderBy('number', 'asc').get();
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+async function saveRoom(roomData) {
+    if (roomData.id) {
+        await roomsCollection().doc(roomData.id).update({
+            config: roomData.config,
+            theme: roomData.theme,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        return roomData.id;
+    } else {
+        const rooms = await loadRooms();
+        const nextNum = rooms.length > 0 ? Math.max(...rooms.map(r => r.number || 0)) + 1 : 1;
+        const ref = await roomsCollection().add({
+            number: nextNum,
+            config: roomData.config,
+            theme: roomData.theme,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        return ref.id;
+    }
+}
+
+async function deleteRoomFromDB(docId) {
+    await roomsCollection().doc(docId).delete();
 }
 
 // ====== ROUTER ======
@@ -55,11 +115,19 @@ function route() {
             alert('Neplatný odkaz na únikovku.');
             router.go('/');
         }
-    } else if (path === '/create') {
+        return;
+    }
+
+    if (!currentUser) {
+        document.getElementById('screen-login').classList.add('active');
+        return;
+    }
+
+    if (path === '/create') {
         showEditor();
     } else if (path.startsWith('/edit/')) {
-        const num = parseInt(path.slice(6));
-        showEditor(num);
+        const docId = path.slice(6);
+        showEditor(docId);
     } else if (path === '/share') {
         document.getElementById('screen-share').classList.add('active');
     } else {
@@ -75,43 +143,55 @@ function showDashboard() {
     renderRoomsList();
 }
 
-function renderRoomsList() {
-    const rooms = getRooms();
+async function renderRoomsList() {
     const list = document.getElementById('rooms-list');
     const empty = document.getElementById('empty-state');
+    const loading = document.getElementById('rooms-loading');
 
-    if (rooms.length === 0) {
+    list.style.display = 'none';
+    empty.style.display = 'none';
+    loading.style.display = 'block';
+
+    try {
+        const rooms = await loadRooms();
+
+        loading.style.display = 'none';
+
+        if (rooms.length === 0) {
+            empty.style.display = 'block';
+            return;
+        }
+
+        list.style.display = 'grid';
+        list.innerHTML = rooms.map(room => {
+            const theme = THEMES[room.theme] || THEMES.physics;
+            const num = String(room.number || 0).padStart(3, '0');
+            const date = room.createdAt?.toDate ? room.createdAt.toDate().toLocaleDateString('cs-CZ') : '';
+            const taskCount = room.config.q.length;
+            const url = buildShareUrl(room.config);
+
+            return `
+            <div class="room-card">
+                <span class="room-card-number">#${num}</span>
+                <div class="room-card-header">
+                    <span class="room-card-icon">${theme.icon}</span>
+                    <span class="room-card-title">${escapeHtml(room.config.t)}</span>
+                </div>
+                <div class="room-card-meta">${theme.name} · ${taskCount} úloh · ${date}</div>
+                <div class="room-card-actions">
+                    <button class="btn-card-copy" onclick="copyUrl('${escapeAttr(url)}', this)">Kopírovat odkaz</button>
+                    <button onclick="previewFromDash('${escapeAttr(room.id)}')">Vyzkoušet</button>
+                    <button onclick="editRoom('${escapeAttr(room.id)}')">Upravit</button>
+                    <button class="btn-card-delete" onclick="deleteRoom('${escapeAttr(room.id)}')">Smazat</button>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (err) {
+        loading.style.display = 'none';
         list.style.display = 'none';
         empty.style.display = 'block';
-        return;
+        console.error('Error loading rooms:', err);
     }
-
-    list.style.display = 'grid';
-    empty.style.display = 'none';
-
-    list.innerHTML = rooms.map(room => {
-        const theme = THEMES[room.theme] || THEMES.physics;
-        const num = String(room.number).padStart(3, '0');
-        const date = room.date ? new Date(room.date).toLocaleDateString('cs-CZ') : '';
-        const taskCount = room.config.q.length;
-        const url = buildShareUrl(room.config);
-
-        return `
-        <div class="room-card">
-            <span class="room-card-number">#${num}</span>
-            <div class="room-card-header">
-                <span class="room-card-icon">${theme.icon}</span>
-                <span class="room-card-title">${escapeHtml(room.config.t)}</span>
-            </div>
-            <div class="room-card-meta">${theme.name} · ${taskCount} úloh · ${date}</div>
-            <div class="room-card-actions">
-                <button class="btn-card-copy" onclick="copyUrl('${escapeAttr(url)}', this)">Kopírovat odkaz</button>
-                <button onclick="previewFromDash(${room.number})">Vyzkoušet</button>
-                <button onclick="editRoom(${room.number})">Upravit</button>
-                <button class="btn-card-delete" onclick="deleteRoom(${room.number})">Smazat</button>
-            </div>
-        </div>`;
-    }).join('');
 }
 
 function buildShareUrl(config) {
@@ -128,22 +208,20 @@ function copyUrl(url, btn) {
     });
 }
 
-function previewFromDash(number) {
-    const rooms = getRooms();
-    const room = rooms.find(r => r.number === number);
-    if (!room) return;
-    const encoded = encodeRoom(room.config);
+async function previewFromDash(docId) {
+    const doc = await roomsCollection().doc(docId).get();
+    if (!doc.exists) return;
+    const encoded = encodeRoom(doc.data().config);
     window.open('#/play/' + encoded, '_blank');
 }
 
-function editRoom(number) {
-    router.go('/edit/' + number);
+function editRoom(docId) {
+    router.go('/edit/' + docId);
 }
 
-function deleteRoom(number) {
+async function deleteRoom(docId) {
     if (!confirm('Opravdu chcete smazat tuto únikovku?')) return;
-    const rooms = getRooms().filter(r => r.number !== number);
-    saveRooms(rooms);
+    await deleteRoomFromDB(docId);
     renderRoomsList();
 }
 
@@ -151,38 +229,42 @@ function deleteRoom(number) {
 let editorState = {
     theme: 'physics',
     questions: [],
-    editingNumber: null
+    editingId: null
 };
 
-function showEditor(editNumber) {
+async function showEditor(editDocId) {
     document.getElementById('screen-editor').classList.add('active');
 
-    if (editNumber) {
-        const rooms = getRooms();
-        const room = rooms.find(r => r.number === editNumber);
-        if (room) {
-            editorState.theme = room.config.e;
-            editorState.editingNumber = editNumber;
-            document.getElementById('room-title').value = room.config.t;
-            document.getElementById('editor-title').textContent = `Upravit #${String(editNumber).padStart(3, '0')}`;
-            editorState.questions = room.config.q.map(q => ({
-                title: q.t,
-                description: q.d,
-                formula: q.f || '',
-                hint: q.h || '',
-                type: q.y,
-                options: q.o || ['', '', '', ''],
-                correct: q.c
-            }));
-            renderThemePicker();
-            renderQuestions();
-            return;
+    if (editDocId) {
+        try {
+            const doc = await roomsCollection().doc(editDocId).get();
+            if (doc.exists) {
+                const data = doc.data();
+                editorState.theme = data.config.e;
+                editorState.editingId = editDocId;
+                document.getElementById('room-title').value = data.config.t;
+                document.getElementById('editor-title').textContent = `Upravit #${String(data.number || 0).padStart(3, '0')}`;
+                editorState.questions = data.config.q.map(q => ({
+                    title: q.t,
+                    description: q.d,
+                    formula: q.f || '',
+                    hint: q.h || '',
+                    type: q.y,
+                    options: q.o || ['', '', '', ''],
+                    correct: q.c
+                }));
+                renderThemePicker();
+                renderQuestions();
+                return;
+            }
+        } catch (e) {
+            console.error('Error loading room for edit:', e);
         }
     }
 
     editorState.theme = 'physics';
     editorState.questions = [];
-    editorState.editingNumber = null;
+    editorState.editingId = null;
     document.getElementById('room-title').value = '';
     document.getElementById('editor-title').textContent = 'Nová únikovka';
     renderThemePicker();
@@ -236,27 +318,22 @@ function renderQuestions() {
                 <span class="question-number">Otázka ${i + 1}</span>
                 <button class="question-remove" onclick="removeQuestion(${i})" title="Odebrat">&times;</button>
             </div>
-
             <div class="field-group">
                 <label class="field-label">Název / nadpis otázky</label>
                 <input type="text" class="input-small" placeholder="např. Newtonův zákon síly" value="${escapeAttr(q.title)}" onchange="updateQ(${i},'title',this.value)">
             </div>
-
             <div class="field-group">
                 <label class="field-label">Zadání úlohy</label>
                 <textarea class="input-small" placeholder="Popište úlohu, kterou mají žáci vyřešit..." onchange="updateQ(${i},'description',this.value)">${escapeHtml(q.description)}</textarea>
             </div>
-
             <div class="field-group">
                 <label class="field-label">Vzorec (nepovinné)</label>
                 <input type="text" class="input-small" placeholder="např. F = m · a" value="${escapeAttr(q.formula)}" onchange="updateQ(${i},'formula',this.value)">
             </div>
-
             <div class="field-group">
                 <label class="field-label">Nápověda (nepovinné)</label>
                 <input type="text" class="input-small" placeholder="Krátká nápověda pro žáky..." value="${escapeAttr(q.hint)}" onchange="updateQ(${i},'hint',this.value)">
             </div>
-
             <div class="field-group">
                 <label class="field-label">Typ odpovědi</label>
                 <div class="type-selector">
@@ -265,7 +342,6 @@ function renderQuestions() {
                     <button class="type-btn ${q.type === 't' ? 'active' : ''}" onclick="setQType(${i},'t')">Text</button>
                 </div>
             </div>
-
             ${q.type === 'c' ? renderChoiceFields(i, q) : ''}
             ${q.type === 'n' ? renderNumberField(i, q) : ''}
             ${q.type === 't' ? renderTextField(i, q) : ''}
@@ -326,7 +402,7 @@ function setQType(index, type) {
     renderQuestions();
 }
 
-function generateRoom() {
+async function generateRoom() {
     const title = document.getElementById('room-title').value.trim();
     const qs = editorState.questions;
 
@@ -355,6 +431,10 @@ function generateRoom() {
         return;
     }
 
+    const btn = document.getElementById('generate-btn');
+    btn.disabled = true;
+    btn.textContent = 'Ukládám...';
+
     const code = Array.from({ length: qs.length }, () => Math.floor(Math.random() * 9) + 1).join('');
 
     const config = {
@@ -362,12 +442,7 @@ function generateRoom() {
         e: editorState.theme,
         k: code,
         q: qs.map(q => {
-            const out = {
-                t: q.title.trim(),
-                d: q.description.trim(),
-                y: q.type,
-                c: q.correct
-            };
+            const out = { t: q.title.trim(), d: q.description.trim(), y: q.type, c: q.correct };
             if (q.formula.trim()) out.f = q.formula.trim();
             if (q.hint.trim()) out.h = q.hint.trim();
             if (q.type === 'c') out.o = q.options.filter(o => o.trim());
@@ -375,31 +450,25 @@ function generateRoom() {
         })
     };
 
-    const rooms = getRooms();
-    const number = editorState.editingNumber || getNextNumber();
-
-    if (editorState.editingNumber) {
-        const idx = rooms.findIndex(r => r.number === number);
-        if (idx >= 0) {
-            rooms[idx].config = config;
-            rooms[idx].date = new Date().toISOString();
-            rooms[idx].theme = editorState.theme;
-        }
-    } else {
-        rooms.push({
-            number,
+    try {
+        await saveRoom({
+            id: editorState.editingId,
             config,
-            theme: editorState.theme,
-            date: new Date().toISOString()
+            theme: editorState.theme
         });
-    }
-    saveRooms(rooms);
 
-    const url = buildShareUrl(config);
-    document.getElementById('share-url').value = url;
-    document.getElementById('copy-feedback').textContent = '';
-    currentShareConfig = config;
-    router.go('/share');
+        const url = buildShareUrl(config);
+        document.getElementById('share-url').value = url;
+        document.getElementById('copy-feedback').textContent = '';
+        currentShareConfig = config;
+        router.go('/share');
+    } catch (err) {
+        console.error('Error saving room:', err);
+        alert('Nepodařilo se uložit únikovku. Zkuste to znovu.');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = editorState.editingId ? 'Uložit změny' : 'Vytvořit únikovku';
+    }
 }
 
 let currentShareConfig = null;
@@ -475,12 +544,8 @@ function openGameTask(index) {
     let html = `<div class="task-header"><h3>${obj.icon} ${escapeHtml(q.t)}</h3></div>`;
     html += `<div class="task-description">${escapeHtml(q.d).replace(/\n/g, '<br>')}</div>`;
 
-    if (q.f) {
-        html += `<div class="task-formula">${escapeHtml(q.f)}</div>`;
-    }
-    if (q.h) {
-        html += `<div class="task-hint">💡 ${escapeHtml(q.h)}</div>`;
-    }
+    if (q.f) html += `<div class="task-formula">${escapeHtml(q.f)}</div>`;
+    if (q.h) html += `<div class="task-hint">💡 ${escapeHtml(q.h)}</div>`;
 
     if (q.y === 'c') {
         html += '<div class="task-options">';
@@ -491,17 +556,15 @@ function openGameTask(index) {
         });
         html += '</div>';
     } else if (q.y === 'n') {
-        html += `
-            <div class="task-input-group">
-                <input type="number" class="task-input" id="game-answer-${index}" placeholder="Zadej číslo" step="any">
-                <button class="task-submit" onclick="checkGameNumber(${index})">Ověřit</button>
-            </div>`;
+        html += `<div class="task-input-group">
+            <input type="number" class="task-input" id="game-answer-${index}" placeholder="Zadej číslo" step="any">
+            <button class="task-submit" onclick="checkGameNumber(${index})">Ověřit</button>
+        </div>`;
     } else if (q.y === 't') {
-        html += `
-            <div class="task-input-group">
-                <input type="text" class="task-input" id="game-answer-${index}" placeholder="Zadej odpověď">
-                <button class="task-submit" onclick="checkGameText(${index})">Ověřit</button>
-            </div>`;
+        html += `<div class="task-input-group">
+            <input type="text" class="task-input" id="game-answer-${index}" placeholder="Zadej odpověď">
+            <button class="task-submit" onclick="checkGameText(${index})">Ověřit</button>
+        </div>`;
     }
 
     html += `<div class="task-feedback" id="game-feedback-${index}"></div>`;
@@ -591,8 +654,7 @@ function checkGameText(taskIndex) {
 
 function solveGameTask(taskIndex, fb) {
     gameState.solved[taskIndex] = true;
-    const code = gameState.config.k;
-    const digit = code[taskIndex];
+    const digit = gameState.config.k[taskIndex];
 
     fb.className = 'task-feedback success';
     fb.textContent = `✅ Správně! Kód z tohoto úkolu je: ${digit}`;
@@ -653,7 +715,6 @@ function tryUnlock() {
 
 function showVictory() {
     document.getElementById('screen-victory').classList.add('active');
-
     const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
     const min = Math.floor(elapsed / 60);
     const sec = elapsed % 60;
@@ -661,7 +722,6 @@ function showVictory() {
 
     document.getElementById('victory-text').innerHTML =
         `Všechny úlohy v <strong>${escapeHtml(theme.name)}</strong> jsi vyřešil/a správně a dveře jsou otevřené!`;
-
     document.getElementById('victory-stats').innerHTML = `
         <p>⏱️ Čas: <strong>${min} min ${sec} s</strong></p>
         <p>✅ Vyřešeno: <strong>${gameState.config.q.length}/${gameState.config.q.length}</strong></p>
@@ -690,6 +750,3 @@ document.addEventListener('keydown', (e) => {
 document.getElementById('lock-input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') tryUnlock();
 });
-
-// ====== INIT ======
-route();

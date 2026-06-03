@@ -21,6 +21,142 @@ body {
     flex-direction: column;
 }
 
+/* ===== LOGIN ===== */
+#screen-login.active {
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+.login-content {
+    text-align: center;
+    max-width: 480px;
+    padding: 40px 24px;
+    animation: fadeIn 0.8s ease;
+}
+
+.login-logo {
+    margin-bottom: 36px;
+}
+
+.logo-icon-big {
+    font-size: 64px;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.login-logo h1 {
+    font-size: 2.8em;
+    color: #e94560;
+    text-shadow: 0 0 20px rgba(233, 69, 96, 0.4);
+}
+
+.login-box {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid #333;
+    border-radius: 16px;
+    padding: 30px;
+    margin-bottom: 20px;
+}
+
+.login-text {
+    color: #aaa;
+    margin-bottom: 22px;
+    line-height: 1.6;
+}
+
+.btn-google {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    color: #333;
+    border: none;
+    padding: 12px 28px;
+    font-size: 1em;
+    font-weight: 500;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-google:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.login-note {
+    color: #555;
+    font-size: 0.85em;
+}
+
+/* User info in header */
+.dash-header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #aaa;
+    font-size: 0.9em;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid #444;
+}
+
+.user-name {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.btn-logout {
+    background: none;
+    border: 1px solid #444;
+    color: #888;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: all 0.2s;
+}
+
+.btn-logout:hover {
+    border-color: #e94560;
+    color: #e94560;
+}
+
+/* Loading state */
+.loading-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #888;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #333;
+    border-top-color: #e94560;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 /* ===== BUTTONS ===== */
 .btn-primary {
     background: linear-gradient(135deg, #e94560, #c62a47);
@@ -1027,6 +1163,15 @@ textarea.input-small {
         gap: 14px;
         text-align: center;
         padding: 16px;
+    }
+
+    .dash-header-right {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .user-name {
+        display: none;
     }
 
     .dash-main {
