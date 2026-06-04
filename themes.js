@@ -13,6 +13,11 @@ const THEMES = {
             { label: 'Police', icon: '📚' },
             { label: 'Kyvadlo', icon: '⏱️' },
             { label: 'Stůl', icon: '🔬' },
+            { label: 'Závaží', icon: '🏋️' },
+            { label: 'Skříňka', icon: '🗄️' },
+            { label: 'Lampa', icon: '💡' },
+            { label: 'Plakát', icon: '📋' },
+            { label: 'Zásuvka', icon: '🔌' },
         ]
     },
     chemistry: {
@@ -29,6 +34,11 @@ const THEMES = {
             { label: 'Zkumavky', icon: '🧪' },
             { label: 'Kahan', icon: '🔥' },
             { label: 'Police', icon: '🧴' },
+            { label: 'Pipeta', icon: '💧' },
+            { label: 'Váhy', icon: '⚖️' },
+            { label: 'Baňka', icon: '⚗️' },
+            { label: 'Ochranné brýle', icon: '🥽' },
+            { label: 'Notebook', icon: '💻' },
         ]
     },
     history: {
@@ -45,6 +55,11 @@ const THEMES = {
             { label: 'Spisy', icon: '📜' },
             { label: 'Hodiny', icon: '🕰️' },
             { label: 'Truhla', icon: '📦' },
+            { label: 'Brnění', icon: '🛡️' },
+            { label: 'Svícen', icon: '🕯️' },
+            { label: 'Kniha', icon: '📖' },
+            { label: 'Portrét', icon: '🖼️' },
+            { label: 'Pero', icon: '🪶' },
         ]
     },
     math: {
@@ -61,6 +76,11 @@ const THEMES = {
             { label: 'Kružítko', icon: '📐' },
             { label: 'Graf', icon: '📈' },
             { label: 'Počítadlo', icon: '🧮' },
+            { label: 'Pravítko', icon: '📏' },
+            { label: 'Kostka', icon: '🎲' },
+            { label: 'Úhloměr', icon: '📐' },
+            { label: 'Sešit', icon: '📓' },
+            { label: 'Křída', icon: '✏️' },
         ]
     },
     biology: {
@@ -77,6 +97,11 @@ const THEMES = {
             { label: 'Akvárium', icon: '🐠' },
             { label: 'Sbírka', icon: '🦋' },
             { label: 'Rostlina', icon: '🪴' },
+            { label: 'Kostra', icon: '🦴' },
+            { label: 'Lupa', icon: '🔍' },
+            { label: 'Terárium', icon: '🦎' },
+            { label: 'Plakát', icon: '🧬' },
+            { label: 'Květináč', icon: '🌻' },
         ]
     },
     geography: {
@@ -93,6 +118,11 @@ const THEMES = {
             { label: 'Atlas', icon: '📖' },
             { label: 'Kompas', icon: '🧭' },
             { label: 'Barometr', icon: '🌡️' },
+            { label: 'Horniny', icon: '🪨' },
+            { label: 'Dalekohled', icon: '🔭' },
+            { label: 'Vlajky', icon: '🏳️' },
+            { label: 'Model', icon: '🏔️' },
+            { label: 'Deník', icon: '📔' },
         ]
     },
     ict: {
@@ -109,6 +139,11 @@ const THEMES = {
             { label: 'Router', icon: '📡' },
             { label: 'Klávesnice', icon: '⌨️' },
             { label: 'Robot', icon: '🤖' },
+            { label: 'Tiskárna', icon: '🖨️' },
+            { label: 'USB disk', icon: '💾' },
+            { label: 'Sluchátka', icon: '🎧' },
+            { label: 'Myš', icon: '🖱️' },
+            { label: 'Kabel', icon: '🔌' },
         ]
     },
     haunted: {
@@ -125,6 +160,11 @@ const THEMES = {
             { label: 'Svícen', icon: '🕯️' },
             { label: 'Pavučina', icon: '🕸️' },
             { label: 'Lebka', icon: '💀' },
+            { label: 'Kniha', icon: '📕' },
+            { label: 'Klíč', icon: '🗝️' },
+            { label: 'Dýka', icon: '🗡️' },
+            { label: 'Obraz', icon: '🖼️' },
+            { label: 'Lektvar', icon: '🧪' },
         ]
     },
     space: {
@@ -141,6 +181,11 @@ const THEMES = {
             { label: 'Radar', icon: '📡' },
             { label: 'Skafandr', icon: '🧑‍🚀' },
             { label: 'Kyslík', icon: '🫧' },
+            { label: 'Mapa hvězd', icon: '⭐' },
+            { label: 'Baterie', icon: '🔋' },
+            { label: 'Helma', icon: '🪖' },
+            { label: 'Tablet', icon: '📱' },
+            { label: 'Vzorky', icon: '🧫' },
         ]
     },
     pirate: {
@@ -157,6 +202,11 @@ const THEMES = {
             { label: 'Kormidlo', icon: '🧭' },
             { label: 'Dělo', icon: '💣' },
             { label: 'Sud', icon: '🍺' },
+            { label: 'Lano', icon: '🪢' },
+            { label: 'Kotva', icon: '⚓' },
+            { label: 'Vlajka', icon: '🏴‍☠️' },
+            { label: 'Lahev', icon: '🍾' },
+            { label: 'Šavle', icon: '⚔️' },
         ]
     },
     jungle: {
@@ -173,13 +223,18 @@ const THEMES = {
             { label: 'Oltář', icon: '🏺' },
             { label: 'Had', icon: '🐍' },
             { label: 'Poklad', icon: '💎' },
+            { label: 'Maska', icon: '🎭' },
+            { label: 'Papoušek', icon: '🦜' },
+            { label: 'Šíp', icon: '🏹' },
+            { label: 'Buben', icon: '🥁' },
+            { label: 'Orchidej', icon: '🌺' },
         ]
     }
 };
 
 function generateRoomSVG(themeId, taskCount) {
     const theme = THEMES[themeId] || THEMES.physics;
-    const n = Math.min(taskCount, 5);
+    const n = Math.min(taskCount, 10);
 
     const objectPositions = [
         { x: 80, y: 50, w: 300, h: 200, lx: 230, ly: 195, type: 'wall' },
@@ -187,6 +242,11 @@ function generateRoomSVG(themeId, taskCount) {
         { x: 820, y: 50, w: 170, h: 230, lx: 905, ly: 265, type: 'wall' },
         { x: 430, y: 260, w: 100, h: 140, lx: 480, ly: 390, type: 'wall' },
         { x: 600, y: 370, w: 300, h: 130, lx: 750, ly: 445, type: 'table' },
+        { x: 420, y: 50, w: 100, h: 120, lx: 470, ly: 160, type: 'wall' },
+        { x: 820, y: 370, w: 160, h: 110, lx: 900, ly: 440, type: 'table' },
+        { x: 20, y: 260, w: 100, h: 120, lx: 70, ly: 370, type: 'wall' },
+        { x: 250, y: 260, w: 120, h: 110, lx: 310, ly: 360, type: 'wall' },
+        { x: 350, y: 400, w: 180, h: 100, lx: 440, ly: 460, type: 'table' },
     ];
 
     let objectsSVG = '';

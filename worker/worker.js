@@ -17,7 +17,7 @@ PRAVIDLA:
 - U typu "c" je "c" index správné odpovědi (0-3)
 - U typu "n" je "c" správné číslo
 - U typu "t" je "c" správný text — MAXIMÁLNĚ 2 slova, musí to být přesná jednoznačná odpověď (např. jméno, pojem, číslo slovem). NIKDY ne věta ani delší fráze!
-- Nápověda "h" NESMÍ obsahovat odpověď ani ji prozrazovat. Nápověda má být krátký tip, který žáka nasměruje správným směrem (např. "Vzpomeň si na periodickou tabulku" nebo "Souvisí to s rokem 1918"). Pokud nevíš jak napsat nápovědu bez prozrazení odpovědi, pole "h" vynech.
+- Pole "h" (nápověda) VŽDY vynech, NIKDY ho nezahrnuj do výstupu
 - Všechny texty piš česky
 
 Odpověz POUZE validním JSON polem (bez markdown, bez vysvětlení):
@@ -25,7 +25,6 @@ Odpověz POUZE validním JSON polem (bez markdown, bez vysvětlení):
   {
     "t": "Název otázky",
     "d": "Podrobné zadání úlohy pro žáky",
-    "h": "Nápověda — nasměrování, NE odpověď (nepovinné)",
     "y": "c",
     "o": ["Možnost A", "Možnost B", "Možnost C", "Možnost D"],
     "c": 0

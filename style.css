@@ -1349,8 +1349,7 @@ select.input-small {
 }
 
 body:has(#screen-game-intro.active) .floating-panel,
-body:has(#screen-game-room.active) .floating-panel,
-body:has(#screen-victory.active) .floating-panel {
+body:has(#screen-game-room.active) .floating-panel {
     display: none;
 }
 
