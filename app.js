@@ -1,3 +1,6 @@
+// ====== AI CONFIG ======
+const AI_WORKER_URL = 'https://unikovky-ai.bekousek.workers.dev';
+
 // ====== FIREBASE CONFIG ======
 const firebaseConfig = FIREBASE_CONFIG;
 
@@ -760,6 +763,80 @@ function showVictory() {
     `;
 }
 
+// ====== AI GENERATION ======
+function openAiModal() {
+    document.getElementById('ai-modal').classList.add('active');
+    document.getElementById('ai-topic').value = '';
+    document.getElementById('ai-grade').value = '';
+    document.getElementById('ai-count').value = '4';
+    document.getElementById('ai-error').textContent = '';
+    document.getElementById('ai-loading').style.display = 'none';
+    document.getElementById('ai-generate-btn').disabled = false;
+    document.getElementById('ai-topic').focus();
+}
+
+function closeAiModal() {
+    document.getElementById('ai-modal').classList.remove('active');
+}
+
+async function generateWithAi() {
+    const topic = document.getElementById('ai-topic').value.trim();
+    const grade = document.getElementById('ai-grade').value.trim();
+    const count = parseInt(document.getElementById('ai-count').value);
+    const errorEl = document.getElementById('ai-error');
+    const loadingEl = document.getElementById('ai-loading');
+    const btn = document.getElementById('ai-generate-btn');
+
+    if (!topic) {
+        errorEl.textContent = 'Zadejte téma pro generování otázek.';
+        return;
+    }
+
+    errorEl.textContent = '';
+    loadingEl.style.display = 'block';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(AI_WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ topic, questionCount: count, grade }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.error || 'Nepodařilo se vygenerovat otázky.');
+        }
+
+        if (!data.questions || data.questions.length === 0) {
+            throw new Error('AI nevrátila žádné otázky. Zkuste jiné téma.');
+        }
+
+        editorState.questions = data.questions.map(q => ({
+            title: q.t || '',
+            description: q.d || '',
+            formula: q.f || '',
+            hint: q.h || '',
+            type: q.y || 'c',
+            options: q.o || ['', '', '', ''],
+            correct: q.c ?? 0,
+        }));
+
+        if (!document.getElementById('room-title').value.trim()) {
+            document.getElementById('room-title').value = topic;
+        }
+
+        renderQuestions();
+        closeAiModal();
+    } catch (err) {
+        errorEl.textContent = err.message || 'Nepodařilo se spojit s AI službou. Zkuste to znovu.';
+    } finally {
+        loadingEl.style.display = 'none';
+        btn.disabled = false;
+    }
+}
+
 // ====== UTILITIES ======
 function escapeHtml(str) {
     const div = document.createElement('div');
@@ -776,6 +853,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         closeTask();
         closeDoorLock();
+        closeAiModal();
     }
 });
 

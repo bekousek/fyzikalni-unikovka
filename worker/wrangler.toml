@@ -1,0 +1,11 @@
+name = "unikovky-ai"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Po vytvoření KV namespace v Cloudflare dashboardu odkomentujte:
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT"
+# id = "VASE_KV_NAMESPACE_ID"
+
+# GEMINI_API_KEY nastavte jako secret:
+# npx wrangler secret put GEMINI_API_KEY

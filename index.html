@@ -75,6 +75,16 @@
             <h3>2. Název únikovky</h3>
             <input type="text" id="room-title" class="input-field" placeholder="např. Opakování mechaniky – 8. ročník" maxlength="80">
         </section>
+        <section class="editor-section ai-section">
+            <div class="ai-generate-box">
+                <div class="ai-generate-icon">🤖</div>
+                <div class="ai-generate-text">
+                    <h3>Vygenerovat pomocí AI</h3>
+                    <p>Zadejte téma a nechte AI vytvořit otázky za vás. Výsledek si můžete upravit.</p>
+                </div>
+                <button class="btn-ai" onclick="openAiModal()">Generovat</button>
+            </div>
+        </section>
         <section class="editor-section">
             <h3>3. Otázky <span class="task-count" id="task-count">(0/5)</span></h3>
             <div id="questions-list" class="questions-list"></div>
@@ -151,6 +161,42 @@
         </div>
         <button class="btn-primary" onclick="tryUnlock()">Odemknout</button>
         <p id="lock-message" class="lock-message"></p>
+    </div>
+</div>
+
+<!-- ============ AI GENERATE MODAL ============ -->
+<div id="ai-modal" class="modal">
+    <div class="modal-content ai-modal-content">
+        <button class="modal-close" onclick="closeAiModal()">&times;</button>
+        <h2>🤖 AI generátor otázek</h2>
+        <p class="ai-modal-desc">Popište téma a AI vytvoří otázky pro vaši únikovku.</p>
+        <div class="field-group">
+            <label class="field-label">Téma / zadání</label>
+            <textarea id="ai-topic" class="input-small" placeholder="např. Opakování zlomků pro 6. ročník, nebo Druhá světová válka – klíčové události" rows="3"></textarea>
+        </div>
+        <div class="ai-modal-row">
+            <div class="field-group" style="flex:1">
+                <label class="field-label">Ročník / úroveň (nepovinné)</label>
+                <input type="text" id="ai-grade" class="input-small" placeholder="např. 8. ročník ZŠ">
+            </div>
+            <div class="field-group" style="flex:0 0 120px">
+                <label class="field-label">Počet otázek</label>
+                <select id="ai-count" class="input-small">
+                    <option value="3">3</option>
+                    <option value="4" selected>4</option>
+                    <option value="5">5</option>
+                </select>
+            </div>
+        </div>
+        <div id="ai-error" class="ai-error"></div>
+        <div id="ai-loading" class="ai-loading" style="display:none">
+            <div class="spinner"></div>
+            <p>AI generuje otázky...</p>
+        </div>
+        <div class="ai-modal-actions">
+            <button class="btn-secondary" onclick="closeAiModal()">Zrušit</button>
+            <button class="btn-ai" id="ai-generate-btn" onclick="generateWithAi()">Vygenerovat otázky</button>
+        </div>
     </div>
 </div>
 
