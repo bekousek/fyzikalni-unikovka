@@ -1,5 +1,5 @@
 // ====== AI CONFIG ======
-const AI_WORKER_URL = 'https://unikovky-ai.bekousek.workers.dev';
+const AI_WORKER_URL = 'https://unikovky-ai.ondrejbek8.workers.dev';
 
 // ====== FIREBASE CONFIG ======
 const firebaseConfig = FIREBASE_CONFIG;
