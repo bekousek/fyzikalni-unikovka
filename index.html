@@ -181,11 +181,7 @@
             </div>
             <div class="field-group" style="flex:0 0 120px">
                 <label class="field-label">Počet otázek</label>
-                <select id="ai-count" class="input-small">
-                    <option value="3">3</option>
-                    <option value="4" selected>4</option>
-                    <option value="5">5</option>
-                </select>
+                <input type="number" id="ai-count" class="input-small" min="1" max="10" value="4" step="1">
             </div>
         </div>
         <div id="ai-error" class="ai-error"></div>

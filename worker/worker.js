@@ -16,8 +16,8 @@ PRAVIDLA:
 - U typu "c" vždy uveď přesně 4 možnosti
 - U typu "c" je "c" index správné odpovědi (0-3)
 - U typu "n" je "c" správné číslo
-- U typu "t" je "c" správný text (jedno slovo nebo krátká fráze)
-- Vzorec "f" a nápověda "h" jsou nepovinné, ale alespoň u poloviny otázek je uveď
+- U typu "t" je "c" správný text — MAXIMÁLNĚ 2 slova, musí to být přesná jednoznačná odpověď (např. jméno, pojem, číslo slovem). NIKDY ne věta ani delší fráze!
+- Nápověda "h" NESMÍ obsahovat odpověď ani ji prozrazovat. Nápověda má být krátký tip, který žáka nasměruje správným směrem (např. "Vzpomeň si na periodickou tabulku" nebo "Souvisí to s rokem 1918"). Pokud nevíš jak napsat nápovědu bez prozrazení odpovědi, pole "h" vynech.
 - Všechny texty piš česky
 
 Odpověz POUZE validním JSON polem (bez markdown, bez vysvětlení):
@@ -25,8 +25,7 @@ Odpověz POUZE validním JSON polem (bez markdown, bez vysvětlení):
   {
     "t": "Název otázky",
     "d": "Podrobné zadání úlohy pro žáky",
-    "f": "Vzorec nebo klíčová informace (nepovinné)",
-    "h": "Nápověda pro žáky (nepovinné)",
+    "h": "Nápověda — nasměrování, NE odpověď (nepovinné)",
     "y": "c",
     "o": ["Možnost A", "Možnost B", "Možnost C", "Možnost D"],
     "c": 0
@@ -138,7 +137,7 @@ export default {
             });
         }
 
-        const count = Math.min(5, Math.max(3, parseInt(questionCount) || 4));
+        const count = Math.min(10, Math.max(1, parseInt(questionCount) || 4));
         const prompt = buildPrompt(topic, count, grade);
 
         const groqKey = env.GROQ_API_KEY;
@@ -180,14 +179,13 @@ export default {
                 });
             }
 
-            const validated = questions.slice(0, 5).map(q => {
+            const validated = questions.slice(0, 10).map(q => {
                 const out = {
                     t: String(q.t || '').slice(0, 200),
                     d: String(q.d || '').slice(0, 1000),
                     y: ['c', 'n', 't'].includes(q.y) ? q.y : 'c',
                     c: q.c,
                 };
-                if (q.f) out.f = String(q.f).slice(0, 200);
                 if (q.h) out.h = String(q.h).slice(0, 200);
                 if (out.y === 'c') {
                     out.o = Array.isArray(q.o) ? q.o.slice(0, 4).map(o => String(o).slice(0, 200)) : ['A', 'B', 'C', 'D'];

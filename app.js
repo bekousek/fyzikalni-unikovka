@@ -280,7 +280,6 @@ async function showEditor(editDocId) {
                 editorState.questions = data.config.q.map(q => ({
                     title: q.t,
                     description: q.d,
-                    formula: q.f || '',
                     hint: q.h || '',
                     type: q.y,
                     options: q.o || ['', '', '', ''],
@@ -320,11 +319,10 @@ function selectTheme(id) {
 }
 
 function addQuestion() {
-    if (editorState.questions.length >= 5) return;
+    if (editorState.questions.length >= 10) return;
     editorState.questions.push({
         title: '',
         description: '',
-        formula: '',
         hint: '',
         type: 'c',
         options: ['', '', '', ''],
@@ -342,8 +340,8 @@ function removeQuestion(index) {
 
 function renderQuestions() {
     const list = document.getElementById('questions-list');
-    document.getElementById('task-count').textContent = `(${editorState.questions.length}/5)`;
-    document.getElementById('add-question-btn').style.display = editorState.questions.length >= 5 ? 'none' : '';
+    document.getElementById('task-count').textContent = `(${editorState.questions.length}/10)`;
+    document.getElementById('add-question-btn').style.display = editorState.questions.length >= 10 ? 'none' : '';
 
     list.innerHTML = editorState.questions.map((q, i) => `
         <div class="question-card" data-index="${i}">
@@ -358,10 +356,6 @@ function renderQuestions() {
             <div class="field-group">
                 <label class="field-label">Zadání úlohy</label>
                 <textarea class="input-small" placeholder="Popište úlohu, kterou mají žáci vyřešit..." onchange="updateQ(${i},'description',this.value)">${escapeHtml(q.description)}</textarea>
-            </div>
-            <div class="field-group">
-                <label class="field-label">Vzorec (nepovinné)</label>
-                <input type="text" class="input-small" placeholder="např. F = m · a" value="${escapeAttr(q.formula)}" onchange="updateQ(${i},'formula',this.value)">
             </div>
             <div class="field-group">
                 <label class="field-label">Nápověda (nepovinné)</label>
@@ -441,8 +435,8 @@ async function generateRoom() {
 
     const errors = [];
     if (!title) errors.push('Zadejte název únikovky.');
-    if (qs.length < 3) errors.push('Přidejte alespoň 3 otázky.');
-    if (qs.length > 5) errors.push('Maximum je 5 otázek.');
+    if (qs.length < 1) errors.push('Přidejte alespoň 1 otázku.');
+    if (qs.length > 10) errors.push('Maximum je 10 otázek.');
 
     qs.forEach((q, i) => {
         if (!q.title.trim()) errors.push(`Otázka ${i + 1}: chybí název.`);
@@ -476,8 +470,7 @@ async function generateRoom() {
         k: code,
         q: qs.map(q => {
             const out = { t: q.title.trim(), d: q.description.trim(), y: q.type, c: q.correct };
-            if (q.formula.trim()) out.f = q.formula.trim();
-            if (q.hint.trim()) out.h = q.hint.trim();
+            if (q.hint && q.hint.trim()) out.h = q.hint.trim();
             if (q.type === 'c') out.o = q.options.filter(o => o.trim());
             return out;
         })
@@ -792,6 +785,11 @@ async function generateWithAi() {
         return;
     }
 
+    if (isNaN(count) || count < 1 || count > 10) {
+        errorEl.textContent = 'Počet otázek musí být mezi 1 a 10.';
+        return;
+    }
+
     errorEl.textContent = '';
     loadingEl.style.display = 'block';
     btn.disabled = true;
@@ -816,7 +814,6 @@ async function generateWithAi() {
         editorState.questions = data.questions.map(q => ({
             title: q.t || '',
             description: q.d || '',
-            formula: q.f || '',
             hint: q.h || '',
             type: q.y || 'c',
             options: q.o || ['', '', '', ''],

@@ -1348,6 +1348,12 @@ select.input-small {
     display: flex;
 }
 
+body:has(#screen-game-intro.active) .floating-panel,
+body:has(#screen-game-room.active) .floating-panel,
+body:has(#screen-victory.active) .floating-panel {
+    display: none;
+}
+
 .floating-item {
     display: flex;
     align-items: center;
