@@ -34,6 +34,64 @@ Odpověz POUZE validním JSON polem (bez markdown, bez vysvětlení):
 ]`;
 }
 
+async function callGroq(prompt, apiKey) {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+                { role: 'system', content: 'Odpovídej POUZE validním JSON polem. Žádný markdown, žádný text kolem.' },
+                { role: 'user', content: prompt },
+            ],
+            temperature: 0.8,
+            max_tokens: 4096,
+            response_format: { type: 'json_object' },
+        }),
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        let detail = '';
+        try { detail = JSON.parse(errText).error?.message || ''; } catch {}
+        throw new Error(`Groq API chyba (${res.status}). ${detail}`);
+    }
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content;
+}
+
+async function callGemini(prompt, apiKey, model) {
+    const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    temperature: 0.8,
+                    maxOutputTokens: 4096,
+                    responseMimeType: 'application/json',
+                },
+            }),
+        }
+    );
+
+    if (!res.ok) {
+        const errText = await res.text();
+        let detail = '';
+        try { detail = JSON.parse(errText).error?.message || ''; } catch {}
+        throw new Error(`Gemini API chyba (${res.status}). ${detail}`);
+    }
+
+    const data = await res.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text;
+}
+
 export default {
     async fetch(request, env) {
         if (request.method === 'OPTIONS') {
@@ -83,8 +141,10 @@ export default {
         const count = Math.min(5, Math.max(3, parseInt(questionCount) || 4));
         const prompt = buildPrompt(topic, count, grade);
 
-        const apiKey = env.GEMINI_API_KEY;
-        if (!apiKey) {
+        const groqKey = env.GROQ_API_KEY;
+        const geminiKey = env.GEMINI_API_KEY;
+
+        if (!groqKey && !geminiKey) {
             return new Response(JSON.stringify({ error: 'API klíč není nakonfigurován' }), {
                 status: 500,
                 headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
@@ -92,47 +152,14 @@ export default {
         }
 
         try {
-            const models = [
-                'gemini-2.0-flash',
-                'gemini-2.0-flash-lite',
-                'gemini-1.5-flash',
-            ];
-            const model = env.GEMINI_MODEL || models[0];
+            let text;
 
-            const geminiRes = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        generationConfig: {
-                            temperature: 0.8,
-                            maxOutputTokens: 4096,
-                            responseMimeType: 'application/json',
-                        },
-                    }),
-                }
-            );
-
-            if (!geminiRes.ok) {
-                const errText = await geminiRes.text();
-                console.error('Gemini error:', geminiRes.status, errText);
-                let detail = '';
-                try {
-                    const errJson = JSON.parse(errText);
-                    detail = errJson.error?.message || '';
-                } catch {}
-                return new Response(JSON.stringify({
-                    error: `AI služba vrátila chybu (${geminiRes.status}). ${detail}`.trim()
-                }), {
-                    status: 502,
-                    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-                });
+            if (groqKey) {
+                text = await callGroq(prompt, groqKey);
+            } else {
+                const model = env.GEMINI_MODEL || 'gemini-2.0-flash';
+                text = await callGemini(prompt, geminiKey, model);
             }
-
-            const geminiData = await geminiRes.json();
-            const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
 
             if (!text) {
                 return new Response(JSON.stringify({ error: 'AI nevrátila odpověď. Zkuste to znovu.' }), {
@@ -142,7 +169,9 @@ export default {
             }
 
             const jsonStr = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-            const questions = JSON.parse(jsonStr);
+            let parsed = JSON.parse(jsonStr);
+
+            const questions = Array.isArray(parsed) ? parsed : (parsed.questions || parsed.q || Object.values(parsed)[0]);
 
             if (!Array.isArray(questions) || questions.length === 0) {
                 return new Response(JSON.stringify({ error: 'AI vygenerovala neplatná data. Zkuste to znovu.' }), {
@@ -172,8 +201,8 @@ export default {
             });
         } catch (err) {
             console.error('Worker error:', err);
-            return new Response(JSON.stringify({ error: 'Chyba při generování. Zkuste to znovu.' }), {
-                status: 500,
+            return new Response(JSON.stringify({ error: err.message || 'Chyba při generování. Zkuste to znovu.' }), {
+                status: 502,
                 headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
             });
         }
