@@ -682,16 +682,16 @@ async function generateRoom() {
             } else if (q.type === 'n' || q.type === 't') {
                 out.c = q.correct;
             } else if (q.type === 'p') {
-                out.p = q.pairs.filter(p => p[0].trim() && p[1].trim()).map(p => [p[0].trim(), p[1].trim()]);
+                out.p = q.pairs.filter(p => p[0].trim() && p[1].trim()).map(p => ({ l: p[0].trim(), r: p[1].trim() }));
             } else if (q.type === 's') {
                 out.s = q.seq.map(s => s.trim()).filter(Boolean);
             } else if (q.type === 'l') {
                 out.l = q.tl
                     .filter(t => String(t[1]).trim() && String(t[0]).trim() !== '' && !isNaN(Number(t[0])))
-                    .map(t => [Number(t[0]), String(t[1]).trim()]);
+                    .map(t => ({ y: Number(t[0]), e: String(t[1]).trim() }));
             } else if (q.type === 'g') {
                 out.g = q.groups.filter(g => g.name.trim() && splitItems(g.itemsText).length)
-                    .map(g => [g.name.trim(), splitItems(g.itemsText)]);
+                    .map(g => ({ n: g.name.trim(), i: splitItems(g.itemsText) }));
             } else if (q.type === 'z') {
                 out.z = parseCloze(q.clozeText);
             }
@@ -849,11 +849,11 @@ function openGameTask(index) {
         taskUI.correct = (q.s || []).slice();
         html += renderOrderGame(index, shuffle(q.s || []), false);
     } else if (q.y === 'l') {
-        const sorted = (q.l || []).slice().sort((a, b) => a[0] - b[0]);
-        taskUI.correct = sorted.map(e => e[1]);
+        const sorted = (q.l || []).slice().sort((a, b) => a.y - b.y);
+        taskUI.correct = sorted.map(e => e.e);
         taskUI.years = {};
-        (q.l || []).forEach(e => { taskUI.years[e[1]] = e[0]; });
-        html += renderOrderGame(index, shuffle((q.l || []).map(e => e[1])), true);
+        (q.l || []).forEach(e => { taskUI.years[e.e] = e.y; });
+        html += renderOrderGame(index, shuffle((q.l || []).map(e => e.e)), true);
     } else if (q.y === 'g') {
         taskUI.selItem = null;
         html += renderGroupsGame(index, q);
@@ -886,8 +886,8 @@ function closeTask() {
 
 // --- Spojování dvojic (p) ---
 function renderPairsGame(index, q) {
-    const lefts = (q.p || []).map((p, i) => ({ i, text: p[0] }));
-    const rights = shuffle((q.p || []).map((p, i) => ({ i, text: p[1] })));
+    const lefts = (q.p || []).map((p, i) => ({ i, text: p.l }));
+    const rights = shuffle((q.p || []).map((p, i) => ({ i, text: p.r })));
     let h = '<p class="task-howto">Klikni na položku vlevo a pak na tu, která k ní patří vpravo.</p>';
     h += '<div class="pairs-grid"><div class="pairs-col">';
     h += lefts.map(l => `<button class="pair-item" data-side="l" data-pi="${l.i}" onclick="selectPair(${index},'l',${l.i},this)">${escapeHtml(l.text)}</button>`).join('');
@@ -982,14 +982,14 @@ function checkGameOrder(index) {
 
 // --- Roztřídění do skupin (g) ---
 function renderGroupsGame(index, q) {
-    const items = shuffle((q.g || []).flatMap((g, ci) => g[1].map(it => ({ label: it, ci }))));
+    const items = shuffle((q.g || []).flatMap((g, ci) => (g.i || []).map(it => ({ label: it, ci }))));
     let h = '<p class="task-howto">Klikni na položku a pak na skupinu, kam patří.</p>';
     h += `<div class="groups-pool" id="groups-pool-${index}" onclick="returnGroupItem(${index})">`;
     h += items.map(it => `<button class="group-item" data-ci="${it.ci}" data-label="${escapeAttr(it.label)}" onclick="event.stopPropagation();selectGroupItem(${index},this)">${escapeHtml(it.label)}</button>`).join('');
     h += '</div><div class="groups-cats">';
     (q.g || []).forEach((g, ci) => {
         h += `<div class="group-cat" onclick="dropGroupItem(${index},${ci},this)">
-            <div class="group-cat-name">${escapeHtml(g[0])}</div>
+            <div class="group-cat-name">${escapeHtml(g.n)}</div>
             <div class="group-cat-items" data-ci="${ci}"></div>
         </div>`;
     });
@@ -1368,10 +1368,10 @@ function fromConfigQuestion(q) {
         options: q.o || ['', '', '', ''],
         correct: q.c
     };
-    if (q.y === 'p') item.pairs = (q.p || []).map(p => [p[0] || '', p[1] || '']);
+    if (q.y === 'p') item.pairs = (q.p || []).map(p => [p.l || '', p.r || '']);
     if (q.y === 's') item.seq = (q.s || []).slice();
-    if (q.y === 'l') item.tl = (q.l || []).map(t => [t[0], t[1]]);
-    if (q.y === 'g') item.groups = (q.g || []).map(g => ({ name: g[0] || '', itemsText: (g[1] || []).join(', ') }));
+    if (q.y === 'l') item.tl = (q.l || []).map(t => [t.y, t.e]);
+    if (q.y === 'g') item.groups = (q.g || []).map(g => ({ name: g.n || '', itemsText: (g.i || []).join(', ') }));
     if (q.y === 'z') item.clozeText = clozeToRaw(q.z);
     return item;
 }

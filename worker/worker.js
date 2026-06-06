@@ -18,10 +18,10 @@ Každá úloha má pole "t" (krátký název), "d" (zadání pro žáky) a "y" (
 - "c" Výběr z možností: "o" = pole přesně 4 možností, "c" = index správné odpovědi (0–3)
 - "n" Číslo: "c" = správné číslo
 - "t" Text: "c" = správná odpověď, MAXIMÁLNĚ 2 slova, jednoznačná (jméno, pojem)
-- "p" Spojování dvojic: "p" = pole 3–5 dvojic [["levá","pravá"], ...], které k sobě patří
+- "p" Spojování dvojic: "p" = pole 3–5 dvojic [{"l":"levá","r":"pravá"}, ...], které k sobě patří
 - "s" Seřazení: "s" = pole 3–5 položek ve SPRÁVNÉM pořadí (např. podle velikosti, postupu)
-- "l" Časová osa: "l" = pole 3–5 dvojic [rok, "událost"], kde rok je celé číslo
-- "g" Roztřídění do skupin: "g" = pole 2–3 skupin [["název skupiny", ["položka1","položka2"]], ...]
+- "l" Časová osa: "l" = pole 3–5 položek [{"y":rok,"e":"událost"}, ...], kde rok je celé číslo
+- "g" Roztřídění do skupin: "g" = pole 2–3 skupin [{"n":"název skupiny","i":["položka1","položka2"]}, ...]
 - "z" Doplňování do textu: "z" = {"text":"věta s {0} a {1}", "a":["odpověď0","odpověď1"]} — pro vynechaná slova použij {0},{1}…
 
 PRAVIDLA:
@@ -118,10 +118,12 @@ function sanitizeQuestion(q) {
         if (!s) return null;
         out.c = s.slice(0, 80);
     } else if (out.y === 'p') {
-        const pairs = Array.isArray(q.p)
-            ? q.p.filter(p => Array.isArray(p) && String(p[0]).trim() && String(p[1]).trim())
-                .slice(0, 6).map(p => [String(p[0]).slice(0, 120), String(p[1]).slice(0, 120)])
-            : [];
+        // Přijme [["l","r"],...] i [{l,r},...]; ukládá jako [{l,r}] (Firestore nepovoluje vnořená pole).
+        const pairs = (Array.isArray(q.p) ? q.p : []).map(p => {
+            const l = Array.isArray(p) ? p[0] : (p && p.l);
+            const r = Array.isArray(p) ? p[1] : (p && p.r);
+            return { l: String(l == null ? '' : l).slice(0, 120), r: String(r == null ? '' : r).slice(0, 120) };
+        }).filter(p => p.l.trim() && p.r.trim());
         if (pairs.length < 2) return null;
         out.p = pairs;
     } else if (out.y === 's') {
@@ -129,18 +131,23 @@ function sanitizeQuestion(q) {
         if (seq.length < 2) return null;
         out.s = seq;
     } else if (out.y === 'l') {
-        const l = Array.isArray(q.l)
-            ? q.l.filter(e => Array.isArray(e) && String(e[1]).trim() && String(e[0]).trim() !== '' && !isNaN(Number(e[0])))
-                .slice(0, 6).map(e => [Number(e[0]), String(e[1]).slice(0, 120)])
-            : [];
+        // Přijme [[rok,"e"],...] i [{y,e},...]; ukládá jako [{y,e}].
+        const l = (Array.isArray(q.l) ? q.l : []).map(e => {
+            const y = Array.isArray(e) ? e[0] : (e && e.y);
+            const ev = Array.isArray(e) ? e[1] : (e && e.e);
+            return { y: Number(y), e: String(ev == null ? '' : ev).slice(0, 120) };
+        }).filter(e => e.e.trim() && !isNaN(e.y)).slice(0, 6);
         if (l.length < 2) return null;
         out.l = l;
     } else if (out.y === 'g') {
-        const g = Array.isArray(q.g)
-            ? q.g.filter(c => Array.isArray(c) && String(c[0]).trim() && Array.isArray(c[1]))
-                .slice(0, 3).map(c => [String(c[0]).slice(0, 80), c[1].map(it => String(it).slice(0, 80)).filter(Boolean)])
-            : [];
-        if (g.length < 2 || g.some(c => c[1].length === 0)) return null;
+        // Přijme [["n",[...]],...] i [{n,i},...]; ukládá jako [{n,i}].
+        const g = (Array.isArray(q.g) ? q.g : []).map(c => {
+            const name = Array.isArray(c) ? c[0] : (c && c.n);
+            const items = Array.isArray(c) ? c[1] : (c && c.i);
+            const its = Array.isArray(items) ? items.map(it => String(it).slice(0, 80)).filter(Boolean) : [];
+            return { n: String(name == null ? '' : name).slice(0, 80), i: its };
+        }).filter(c => c.n.trim() && c.i.length).slice(0, 3);
+        if (g.length < 2) return null;
         out.g = g;
     } else if (out.y === 'z') {
         const z = q.z && typeof q.z === 'object' ? q.z : null;

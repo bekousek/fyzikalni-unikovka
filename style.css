@@ -1434,6 +1434,14 @@ select.input-small {
 /* ===== EDITOR: nové typy úloh ===== */
 .type-select {
     width: 100%;
+    background-color: #16213e;
+    color: #fff;
+    cursor: pointer;
+}
+
+.type-select option {
+    background-color: #16213e;
+    color: #fff;
 }
 
 .pairs-editor, .seq-editor, .groups-editor {
