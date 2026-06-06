@@ -258,6 +258,16 @@ function generateRoomSVG(themeId, taskCount) {
 
     return `
     <svg viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <radialGradient id="vignette" cx="50%" cy="44%" r="72%">
+                <stop offset="55%" stop-color="#000" stop-opacity="0"/>
+                <stop offset="100%" stop-color="#000" stop-opacity="0.55"/>
+            </radialGradient>
+            <radialGradient id="lightbeam" cx="50%" cy="0%" r="60%">
+                <stop offset="0%" stop-color="#fff" stop-opacity="0.10"/>
+                <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+            </radialGradient>
+        </defs>
         <!-- Floor -->
         ${generateFloor(theme)}
         <!-- Wall -->
@@ -276,6 +286,9 @@ function generateRoomSVG(themeId, taskCount) {
         <!-- Table shadows -->
         <ellipse cx="190" cy="555" rx="130" ry="7" fill="rgba(0,0,0,0.12)"/>
         <ellipse cx="750" cy="555" rx="140" ry="7" fill="rgba(0,0,0,0.12)"/>
+        <!-- Atmosféra: světelný kužel + vinětace (nesmí blokovat kliky) -->
+        <rect x="0" y="0" width="1200" height="700" rx="10" fill="url(#lightbeam)" pointer-events="none"/>
+        <rect x="0" y="0" width="1200" height="700" rx="10" fill="url(#vignette)" pointer-events="none"/>
     </svg>`;
 }
 
@@ -367,21 +380,54 @@ function generateObject(themeId, index, pos, obj) {
         jungle: [genJungleTotem, genJungleVines, genJungleAltar, genJungleSnake, genJungleTreasure],
     };
     const gen = generators[themeId]?.[index];
-    if (!gen) return generateGenericObject(index, pos, obj);
-    return `<g class="clickable-object" data-task="${index}" role="button" tabindex="0">
+    if (!gen) return generateGenericObject(themeId, index, pos, obj);
+    return `<g class="clickable-object" data-task="${index}" role="button" tabindex="0" aria-label="${obj.label}">
         ${gen(pos)}
-        <text x="${pos.lx}" y="${pos.ly}" fill="#FFD700" font-size="11" text-anchor="middle">${obj.icon} Klikni!</text>
-        <circle class="task-indicator" data-task-ind="${index}" cx="${pos.x + pos.w - 15}" cy="${pos.y + 15}" r="10" fill="#666" opacity="0.4"/>
+        ${solvedBadge(index, pos)}
     </g>`;
 }
 
-function generateGenericObject(index, pos, obj) {
-    return `<g class="clickable-object" data-task="${index}" role="button" tabindex="0">
-        <rect x="${pos.x}" y="${pos.y}" width="${pos.w}" height="${pos.h}" rx="8" fill="rgba(255,255,255,0.08)" stroke="#666" stroke-width="2"/>
-        <text x="${pos.x + pos.w/2}" y="${pos.y + pos.h/2 - 10}" fill="white" font-size="36" text-anchor="middle">${obj.icon}</text>
-        <text x="${pos.x + pos.w/2}" y="${pos.y + pos.h/2 + 20}" fill="#ccc" font-size="13" text-anchor="middle">${obj.label}</text>
-        <text x="${pos.lx}" y="${pos.ly}" fill="#FFD700" font-size="11" text-anchor="middle">Klikni!</text>
-        <circle class="task-indicator" data-task-ind="${index}" cx="${pos.x + pos.w - 15}" cy="${pos.y + 15}" r="10" fill="#666" opacity="0.4"/>
+// Zelený ✓ odznak – skrytý (opacity 0), odhalí se až po vyřešení úlohy.
+function solvedBadge(index, pos) {
+    return `<g class="task-indicator" data-task-ind="${index}" opacity="0" transform="translate(${pos.x + pos.w - 16},${pos.y + 16})">
+        <circle r="11" fill="#4CAF50" stroke="#fff" stroke-width="1.5"/>
+        <path d="M -5 0 L -1.5 4 L 5 -4" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>`;
+}
+
+// Vnímaná světlost barvy (0–255) – pro volbu kontrastních barev na světlém i tmavém motivu.
+function luminance(hex) {
+    const n = parseInt(hex.replace('#', ''), 16);
+    return 0.299 * ((n >> 16) & 0xFF) + 0.587 * ((n >> 8) & 0xFF) + 0.114 * (n & 0xFF);
+}
+
+// Nenápadný objekt pro úlohy bez vlastního detailního tvaru (6.–10.).
+// Splývá s místností: na zdi rám/obraz, na podlaze bedna – bez borderu a popisku.
+// Barvy se volí podle světlosti motivu, aby objekt zůstal viditelný i na tmavém pozadí.
+function generateGenericObject(themeId, index, pos, obj) {
+    const theme = THEMES[themeId] || THEMES.physics;
+    if (pos.type === 'table') {
+        const floorDark = luminance(theme.floorColor) < 100;
+        const wood = adjustColor(theme.floorColor, floorDark ? 40 : 18);
+        const edge = adjustColor(theme.floorColor, floorDark ? 10 : -28);
+        const ink = floorDark ? '#e2e2e2' : adjustColor(theme.floorColor, -50);
+        return `<g class="clickable-object" data-task="${index}" role="button" tabindex="0" aria-label="${obj.label}">
+            <rect x="${pos.x}" y="${pos.y}" width="${pos.w}" height="${pos.h}" rx="4" fill="${wood}" stroke="${edge}" stroke-width="2"/>
+            <line x1="${pos.x}" y1="${pos.y + pos.h/2}" x2="${pos.x + pos.w}" y2="${pos.y + pos.h/2}" stroke="${edge}" stroke-width="1.5"/>
+            <line x1="${pos.x + pos.w/2}" y1="${pos.y}" x2="${pos.x + pos.w/2}" y2="${pos.y + pos.h}" stroke="${edge}" stroke-width="1.5"/>
+            <text x="${pos.x + pos.w/2}" y="${pos.y + pos.h/2 + 11}" fill="${ink}" font-size="30" text-anchor="middle" opacity="0.8">${obj.icon}</text>
+            ${solvedBadge(index, pos)}
+        </g>`;
+    }
+    const wallDark = luminance(theme.wallColor) < 110;
+    const frame = adjustColor(theme.trimColor, wallDark ? 35 : 0);
+    const inner = adjustColor(theme.wallColor, wallDark ? 48 : -28);
+    const ink = wallDark ? '#e6e6e6' : adjustColor(theme.wallColor, -70);
+    return `<g class="clickable-object" data-task="${index}" role="button" tabindex="0" aria-label="${obj.label}">
+        <rect x="${pos.x}" y="${pos.y}" width="${pos.w}" height="${pos.h}" rx="3" fill="${frame}"/>
+        <rect x="${pos.x + 6}" y="${pos.y + 6}" width="${pos.w - 12}" height="${pos.h - 12}" fill="${inner}"/>
+        <text x="${pos.x + pos.w/2}" y="${pos.y + pos.h/2 + 13}" fill="${ink}" font-size="34" text-anchor="middle" opacity="0.8">${obj.icon}</text>
+        ${solvedBadge(index, pos)}
     </g>`;
 }
 

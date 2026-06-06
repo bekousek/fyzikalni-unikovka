@@ -54,6 +54,34 @@ Pro rate limiting vytvoř KV namespace:
 
 Bez KV namespace worker funguje, jen nebude mít rate limiting.
 
+## 5. (Nepovinné) Nahrávání obrázků přes R2
+
+Aby šlo k úlohám nahrávat obrázky, vytvoř R2 bucket a připoj ho k workeru.
+
+### Přes dashboard
+1. V dashboardu: **R2** > **Create bucket** > název `unikovky-images` > **Create**
+   - (R2 má free tier: 10 GB úložiště, bez poplatků za stažení. Aktivace R2 může vyžadovat ověření účtu kartou, samotné používání ve free limitu je zdarma.)
+2. V nastavení workeru: **Settings** > **Bindings** > **Add** > **R2 bucket**
+   - Variable name: `IMAGES`
+   - R2 bucket: vyber `unikovky-images`
+
+### Přes CLI / wrangler.toml
+V `wrangler.toml` odkomentuj:
+```toml
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "unikovky-images"
+```
+a vytvoř bucket:
+```bash
+wrangler r2 bucket create unikovky-images
+wrangler deploy
+```
+
+Obrázky se nahrávají přes `POST /upload` (max 2 MB, JPG/PNG/WEBP/GIF) a servírují přes
+`GET /img/<klíč>` ze stejné domény workeru – do odkazu na únikovku se ukládá jen krátká URL.
+Bez R2 bindingu únikovka funguje, jen nepůjde nahrávat obrázky.
+
 ## Limity free tieru
 
 - **Gemini**: 15 požadavků/minutu, 1500/den

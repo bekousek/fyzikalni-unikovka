@@ -7,5 +7,10 @@ compatibility_date = "2024-01-01"
 # binding = "RATE_LIMIT"
 # id = "VASE_KV_NAMESPACE_ID"
 
+# Po vytvoření R2 bucketu pro obrázky odkomentujte (viz DEPLOY.md):
+# [[r2_buckets]]
+# binding = "IMAGES"
+# bucket_name = "unikovky-images"
+
 # GEMINI_API_KEY nastavte jako secret:
 # npx wrangler secret put GEMINI_API_KEY

@@ -982,20 +982,58 @@ select.input-small {
 
 .clickable-object {
     cursor: pointer;
-    transition: filter 0.2s ease;
+    transition: filter 0.25s ease;
 }
 
+/* Jemné prosvětlení – objekt se neprozradí dřív, než na něj žák najede. */
 .clickable-object:hover {
-    filter: brightness(1.2) drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+    filter: brightness(1.08) drop-shadow(0 0 5px rgba(255, 235, 180, 0.45));
+}
+
+.clickable-object:focus-visible {
+    outline: none;
+    filter: brightness(1.12) drop-shadow(0 0 6px rgba(255, 235, 180, 0.6));
 }
 
 .clickable-object.solved {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: default;
 }
 
 .clickable-object.solved:hover {
     filter: none;
+}
+
+/* „Rozhlédnout se" – krátké pulzování skrytých předmětů. */
+.clickable-object.peek {
+    animation: peekPulse 1.6s ease-in-out;
+}
+
+@keyframes peekPulse {
+    0%, 100% { filter: none; }
+    25%, 75% { filter: brightness(1.25) drop-shadow(0 0 12px rgba(255, 215, 0, 0.9)); }
+}
+
+.btn-peek {
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffd76a;
+    border: 1px solid rgba(255, 215, 0, 0.4);
+    padding: 6px 14px;
+    font-size: 0.85em;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-peek:hover:not(:disabled) {
+    background: rgba(255, 215, 0, 0.15);
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.25);
+}
+
+.btn-peek:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 /* ===== MODAL ===== */
@@ -1186,6 +1224,295 @@ select.input-small {
     background: rgba(244, 67, 54, 0.12);
     border: 1px solid #f44336;
     color: #f44336;
+}
+
+/* ===== INTERAKTIVNÍ TYPY ÚLOH (hra) ===== */
+.task-howto {
+    color: #9fb3d4;
+    font-size: 0.9em;
+    margin: 4px 0 14px;
+}
+
+/* Spojování dvojic */
+.pairs-grid {
+    display: flex;
+    gap: 16px;
+}
+
+.pairs-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pair-item {
+    padding: 12px 14px;
+    background: #16213e;
+    border: 2px solid #2e3a5a;
+    border-radius: 8px;
+    color: #eee;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.18s ease;
+    font-size: 0.95em;
+}
+
+.pair-item:hover:not(.matched) {
+    border-color: #e94560;
+}
+
+.pair-item.sel {
+    border-color: #FFD700;
+    background: rgba(255, 215, 0, 0.12);
+}
+
+.pair-item.matched {
+    border-color: #4CAF50;
+    background: rgba(76, 175, 80, 0.14);
+    color: #9ae0a0;
+    cursor: default;
+}
+
+.pair-item.wrong {
+    border-color: #f44336;
+    animation: shake 0.4s;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Seřazení / časová osa */
+.order-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+}
+
+.order-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #16213e;
+    border: 2px solid #2e3a5a;
+    border-radius: 8px;
+    color: #eee;
+}
+
+.order-move {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.order-move button {
+    background: #2e3a5a;
+    color: #FFD700;
+    border: none;
+    width: 26px;
+    height: 18px;
+    line-height: 1;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.7em;
+}
+
+.order-move button:hover:not(:disabled) { background: #e94560; color: #fff; }
+.order-move button:disabled { opacity: 0.4; cursor: default; }
+
+/* Roztřídění do skupin */
+.groups-pool {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 48px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 2px dashed #2e3a5a;
+    border-radius: 8px;
+    margin-bottom: 14px;
+}
+
+.group-item {
+    padding: 8px 12px;
+    background: #16213e;
+    border: 2px solid #2e3a5a;
+    border-radius: 8px;
+    color: #eee;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.18s ease;
+}
+
+.group-item:hover { border-color: #e94560; }
+.group-item.sel { border-color: #FFD700; background: rgba(255, 215, 0, 0.12); }
+
+.groups-cats {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.group-cat {
+    flex: 1;
+    min-width: 130px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 2px solid #2e3a5a;
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    transition: border-color 0.18s ease;
+}
+
+.group-cat:hover { border-color: #FFD700; }
+
+.group-cat-name {
+    color: #FFD700;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+}
+
+.group-cat-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 36px;
+}
+
+/* Doplňování do textu */
+.cloze-text {
+    line-height: 2.2;
+    color: #eee;
+    font-size: 1.02em;
+}
+
+.cloze-input {
+    display: inline-block;
+    width: 110px;
+    padding: 4px 8px;
+    margin: 0 3px;
+    background: #16213e;
+    border: none;
+    border-bottom: 2px solid #FFD700;
+    border-radius: 4px 4px 0 0;
+    color: #fff;
+    font-size: 0.95em;
+}
+
+.cloze-input:focus { outline: none; border-bottom-color: #e94560; }
+.cloze-input.correct { border-bottom-color: #4CAF50; color: #9ae0a0; }
+.cloze-input.wrong { border-bottom-color: #f44336; }
+
+.cloze-bank {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.cloze-bank-label { color: #9fb3d4; font-size: 0.85em; }
+
+.cloze-chip {
+    padding: 5px 12px;
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.4);
+    border-radius: 20px;
+    color: #ffd76a;
+    font-size: 0.85em;
+}
+
+/* ===== EDITOR: nové typy úloh ===== */
+.type-select {
+    width: 100%;
+}
+
+.pairs-editor, .seq-editor, .groups-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.pair-edit-row, .seq-edit-row, .tl-edit-row, .group-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pair-edit-row .input-small,
+.group-edit-row .input-small { flex: 1; }
+
+.pair-link { color: #888; flex: 0 0 auto; }
+.seq-num { color: #888; flex: 0 0 22px; font-size: 0.85em; }
+.tl-year { flex: 0 0 90px; }
+.tl-edit-row .input-small:not(.tl-year) { flex: 1; }
+.seq-edit-row .input-small { flex: 1; }
+.group-name { flex: 0 0 34% !important; }
+
+.row-remove {
+    flex: 0 0 auto;
+    background: none;
+    border: none;
+    color: #f44336;
+    font-size: 1.4em;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 6px;
+}
+
+.row-remove:hover { color: #ff7a6e; }
+
+.btn-add-row {
+    align-self: flex-start;
+    background: none;
+    border: 1px dashed #4a6fa5;
+    color: #8fb0e0;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+.btn-add-row:hover { border-color: #FFD700; color: #FFD700; }
+
+/* Obrázek k úloze – editor */
+.image-field {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.image-input { color: #cbd5e8; font-size: 0.85em; }
+.image-status { color: #9fb3d4; font-size: 0.85em; }
+
+.image-preview {
+    max-width: 180px;
+    max-height: 120px;
+    border-radius: 8px;
+    border: 1px solid #2e3a5a;
+}
+
+.image-remove { color: #f0a; }
+
+/* Obrázek k úloze – hra */
+.task-image {
+    display: block;
+    max-width: 100%;
+    max-height: 320px;
+    margin: 14px auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
 }
 
 /* Door lock */
