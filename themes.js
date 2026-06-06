@@ -232,9 +232,12 @@ const THEMES = {
     }
 };
 
-function generateRoomSVG(themeId, taskCount) {
+// slotTasks = pole globálních indexů úloh pro tuto místnost (sloty 0..n-1)
+// showDoor  = vykreslit únikové dveře, roomIndex = pořadí místnosti (jemné odlišení)
+function generateRoomSVG(themeId, slotTasks, showDoor, roomIndex) {
     const theme = THEMES[themeId] || THEMES.physics;
-    const n = Math.min(taskCount, 10);
+    const slots = Array.isArray(slotTasks) ? slotTasks : [];
+    const wallColor = adjustColor(theme.wallColor, ((roomIndex || 0) % 4) * -7);
 
     const objectPositions = [
         { x: 80, y: 50, w: 300, h: 200, lx: 230, ly: 195, type: 'wall' },
@@ -250,10 +253,10 @@ function generateRoomSVG(themeId, taskCount) {
     ];
 
     let objectsSVG = '';
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < slots.length && i < objectPositions.length; i++) {
         const pos = objectPositions[i];
         const obj = theme.objects[i];
-        objectsSVG += generateObject(themeId, i, pos, obj);
+        objectsSVG += generateObject(themeId, i, slots[i], pos, obj);
     }
 
     return `
@@ -271,7 +274,7 @@ function generateRoomSVG(themeId, taskCount) {
         <!-- Floor -->
         ${generateFloor(theme)}
         <!-- Wall -->
-        <rect x="0" y="0" width="1200" height="500" fill="${theme.wallColor}"/>
+        <rect x="0" y="0" width="1200" height="500" fill="${wallColor}"/>
         <!-- Trim -->
         <rect x="0" y="0" width="1200" height="8" fill="${theme.trimColor}"/>
         <rect x="0" y="0" width="8" height="500" fill="${theme.trimColor}"/>
@@ -279,8 +282,8 @@ function generateRoomSVG(themeId, taskCount) {
         <rect x="0" y="492" width="1200" height="8" fill="${theme.trimColor}"/>
         <!-- Window -->
         ${generateWindow(themeId)}
-        <!-- Door -->
-        ${generateDoor()}
+        <!-- Únikové dveře (jen v místnosti s východem) -->
+        ${showDoor ? generateDoor() : ''}
         <!-- Objects -->
         ${objectsSVG}
         <!-- Table shadows -->
@@ -354,7 +357,7 @@ function generateWindow(themeId) {
 
 function generateDoor() {
     return `
-        <g id="door-group">
+        <g id="exit-door" class="exit-door" role="button" tabindex="0" aria-label="Únikové dveře">
             <rect x="1020" y="200" width="140" height="300" rx="4" fill="#6B4226" stroke="#4A2E1A" stroke-width="3"/>
             <rect x="1035" y="215" width="110" height="120" rx="3" fill="#7A5230" stroke="#4A2E1A" stroke-width="1.5"/>
             <rect x="1035" y="350" width="110" height="120" rx="3" fill="#7A5230" stroke="#4A2E1A" stroke-width="1.5"/>
@@ -365,7 +368,7 @@ function generateDoor() {
     `;
 }
 
-function generateObject(themeId, index, pos, obj) {
+function generateObject(themeId, slot, taskIndex, pos, obj) {
     const generators = {
         physics: [genPhysicsBlackboard, genPhysicsScales, genPhysicsShelf, genPhysicsPendulum, genPhysicsLabTable],
         chemistry: [genChemHood, genChemPeriodicTable, genChemTestTubes, genChemBunsen, genChemShelf],
@@ -379,11 +382,11 @@ function generateObject(themeId, index, pos, obj) {
         pirate: [genPirateMap, genPirateChest, genPirateWheel, genPirateCannon, genPirateBarrel],
         jungle: [genJungleTotem, genJungleVines, genJungleAltar, genJungleSnake, genJungleTreasure],
     };
-    const gen = generators[themeId]?.[index];
-    if (!gen) return generateGenericObject(themeId, index, pos, obj);
-    return `<g class="clickable-object" data-task="${index}" role="button" tabindex="0" aria-label="${obj.label}">
+    const gen = generators[themeId]?.[slot];
+    if (!gen) return generateGenericObject(themeId, taskIndex, pos, obj);
+    return `<g class="clickable-object" data-task="${taskIndex}" role="button" tabindex="0" aria-label="${obj.label}">
         ${gen(pos)}
-        ${solvedBadge(index, pos)}
+        ${solvedBadge(taskIndex, pos)}
     </g>`;
 }
 

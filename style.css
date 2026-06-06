@@ -962,6 +962,95 @@ select.input-small {
     padding: 16px;
     min-height: 0;
     overflow: hidden;
+    position: relative;
+}
+
+/* Navigace mezi místnostmi */
+.room-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 215, 0, 0.5);
+    background: rgba(22, 33, 62, 0.85);
+    color: #ffd76a;
+    font-size: 1.4em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.room-nav:hover {
+    background: rgba(233, 69, 96, 0.9);
+    color: #fff;
+    transform: translateY(-50%) scale(1.08);
+}
+
+.room-nav-left { left: 18px; }
+.room-nav-right { right: 18px; }
+
+.room-indicator {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    background: rgba(22, 33, 62, 0.85);
+    color: #cbd5e8;
+    padding: 5px 16px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    letter-spacing: 0.5px;
+    pointer-events: none;
+}
+
+.room-toast {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    z-index: 6;
+    max-width: 80%;
+    text-align: center;
+    background: rgba(22, 33, 62, 0.96);
+    border: 1px solid #e94560;
+    color: #fff;
+    padding: 12px 22px;
+    border-radius: 12px;
+    font-size: 0.95em;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.room-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Únikové dveře */
+.exit-door {
+    cursor: pointer;
+    transition: filter 0.25s ease;
+}
+
+.exit-door:hover {
+    filter: brightness(1.12) drop-shadow(0 0 8px rgba(255, 215, 0, 0.5));
+}
+
+.exit-door.door-open {
+    filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.85));
+    animation: glowPulse 2s ease-in-out infinite;
+}
+
+.exit-door.peek {
+    animation: peekPulse 1.6s ease-in-out;
 }
 
 .room-svg-wrap {

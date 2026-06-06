@@ -122,15 +122,17 @@
         <h2 id="game-theme-name">Fyzikální laboratoř</h2>
         <p class="intro-story">
             Dveře za tebou zaklaply a zámek cvakl. Jsi uvnitř — a ven se dostaneš,
-            jen když rozluštíš tajemství téhle místnosti.
+            jen když rozluštíš tajemství tohoto místa.
             <br><br>
-            Ukrývá <strong id="game-task-count">5</strong> úkolů. Nejsou nijak označené —
-            musíš je <strong>najít</strong>. Prohlédni si každý předmět, na který padne tvůj zrak;
-            za některým se skrývá úloha a kousek tajného kódu k zámku na dveřích.
+            Čeká tě <strong id="game-task-count">5</strong> úkolů ukrytých v několika
+            propojených místnostech. Nejsou nijak označené — musíš je <strong>najít</strong>.
+            Prohlédni si předměty, mezi místnostmi se přepínej <strong>šipkami</strong> po stranách
+            a za některým předmětem objevíš úlohu a kousek tajného kódu.
             <br><br>
-            Když si nebudeš vědět rady, použij <strong>🔍 Rozhlédnout se</strong> — na chvíli ti napoví, kde hledat.
+            Až vyřešíš všechno, <strong>najdi únikové dveře</strong>, klikni na ně a zadej celý kód.
+            Když si nebudeš vědět rady, použij <strong>🔍 Rozhlédnout se</strong>.
         </p>
-        <button class="btn-primary" onclick="startGame()">Vstoupit do místnosti</button>
+        <button class="btn-primary" onclick="startGame()">Vstoupit dovnitř</button>
     </div>
 </div>
 
@@ -141,7 +143,11 @@
         <div class="codes-display" id="codes-display"></div>
     </div>
     <div class="room-container">
+        <button class="room-nav room-nav-left" id="room-nav-left" onclick="navRoom(-1)" title="Předchozí místnost" style="display:none;">◀</button>
         <div id="room-svg-container" class="room-svg-wrap"></div>
+        <button class="room-nav room-nav-right" id="room-nav-right" onclick="navRoom(1)" title="Další místnost" style="display:none;">▶</button>
+        <div class="room-indicator" id="room-indicator"></div>
+        <div class="room-toast" id="room-toast"></div>
     </div>
 </div>
 

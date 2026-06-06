@@ -739,17 +739,24 @@ function previewRoom() {
 }
 
 // ====== GAME ENGINE ======
+const TASKS_PER_ROOM = 4;
+
 let gameState = {
     config: null,
     solved: {},
     startTime: null,
-    peeksLeft: 3
+    peeksLeft: 3,
+    rooms: [],
+    currentRoom: 0,
+    exitRoom: 0
 };
 
 function initGame(config) {
     gameState.config = config;
     gameState.solved = {};
     gameState.startTime = null;
+    gameState.rooms = [];
+    gameState.currentRoom = 0;
 
     const theme = THEMES[config.e] || THEMES.physics;
 
@@ -777,10 +784,34 @@ function startGame() {
     for (let i = 0; i < config.q.length; i++) {
         codesHtml += `<span class="code-slot" id="code-${i}">?</span>`;
     }
-    codesHtml += '<button class="btn-unlock" id="unlock-btn" onclick="showDoorLock()" style="display:none;">🔓 Odemknout</button>';
     document.getElementById('codes-display').innerHTML = codesHtml;
 
-    document.getElementById('room-svg-container').innerHTML = generateRoomSVG(config.e, config.q.length);
+    // Rozdělení úloh do místností; únikové dveře schované v jedné z nich.
+    gameState.rooms = [];
+    for (let i = 0; i < config.q.length; i += TASKS_PER_ROOM) {
+        gameState.rooms.push(
+            Array.from({ length: Math.min(TASKS_PER_ROOM, config.q.length - i) }, (_, k) => i + k)
+        );
+    }
+    gameState.currentRoom = 0;
+    // Únikové dveře jsou v poslední místnosti – hráč k nim musí projít ostatní.
+    gameState.exitRoom = gameState.rooms.length - 1;
+
+    renderCurrentRoom();
+}
+
+function allSolved() {
+    return Object.keys(gameState.solved).length === gameState.config.q.length;
+}
+
+// Vykreslí aktuální místnost, obnoví stav vyřešených úloh a navigaci.
+function renderCurrentRoom() {
+    const config = gameState.config;
+    const slotTasks = gameState.rooms[gameState.currentRoom] || [];
+    const hasDoor = gameState.currentRoom === gameState.exitRoom;
+
+    document.getElementById('room-svg-container').innerHTML =
+        generateRoomSVG(config.e, slotTasks, hasDoor, gameState.currentRoom);
 
     document.querySelectorAll('.clickable-object').forEach(el => {
         const open = () => {
@@ -792,6 +823,68 @@ function startGame() {
             if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); }
         });
     });
+
+    // Obnovit vizuál již vyřešených úloh v této místnosti
+    slotTasks.forEach(gi => {
+        if (gameState.solved[gi]) {
+            const ind = document.querySelector(`[data-task-ind="${gi}"]`);
+            if (ind) ind.setAttribute('opacity', '1');
+            const obj = document.querySelector(`.clickable-object[data-task="${gi}"]`);
+            if (obj) obj.classList.add('solved');
+        }
+    });
+
+    // Únikové dveře
+    const door = document.getElementById('exit-door');
+    if (door) {
+        const trigger = () => tryExitDoor();
+        door.addEventListener('click', trigger);
+        door.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); trigger(); }
+        });
+        if (allSolved()) door.classList.add('door-open');
+    }
+
+    updateRoomNav();
+}
+
+function updateRoomNav() {
+    const total = gameState.rooms.length;
+    const cur = gameState.currentRoom;
+    const ind = document.getElementById('room-indicator');
+    if (ind) ind.textContent = total > 1 ? `Místnost ${cur + 1} / ${total}` : '';
+    const left = document.getElementById('room-nav-left');
+    const right = document.getElementById('room-nav-right');
+    if (left) left.style.display = cur > 0 ? 'flex' : 'none';
+    if (right) right.style.display = cur < total - 1 ? 'flex' : 'none';
+}
+
+function navRoom(dir) {
+    const next = gameState.currentRoom + dir;
+    if (next < 0 || next >= gameState.rooms.length) return;
+    gameState.currentRoom = next;
+    renderCurrentRoom();
+}
+
+// Klik na únikové dveře: hotovo → zadání kódu, jinak hláška.
+function tryExitDoor() {
+    if (allSolved()) {
+        showDoorLock();
+    } else {
+        const remaining = gameState.config.q.length - Object.keys(gameState.solved).length;
+        const word = remaining === 1 ? 'úkol' : (remaining >= 2 && remaining <= 4 ? 'úkoly' : 'úkolů');
+        showRoomToast(`🔒 Dveře jsou zamčené. Nejdřív vyřeš všechny úkoly (zbývá ${remaining} ${word}).`);
+    }
+}
+
+let roomToastTimer = null;
+function showRoomToast(msg) {
+    const el = document.getElementById('room-toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(roomToastTimer);
+    roomToastTimer = setTimeout(() => el.classList.remove('show'), 3200);
 }
 
 // Krátce zvýrazní dosud nevyřešené předměty (omezený počet použití).
@@ -804,6 +897,11 @@ function peekObjects() {
         el.classList.add('peek');
         setTimeout(() => el.classList.remove('peek'), 1600);
     });
+    const door = document.getElementById('exit-door');
+    if (door) {
+        door.classList.add('peek');
+        setTimeout(() => door.classList.remove('peek'), 1600);
+    }
     if (gameState.peeksLeft <= 0) {
         const btn = document.getElementById('peek-btn');
         if (btn) btn.disabled = true;
@@ -1178,8 +1276,14 @@ function solveGameTask(taskIndex, fb) {
     const obj = document.querySelector(`.clickable-object[data-task="${taskIndex}"]`);
     if (obj) obj.classList.add('solved');
 
-    if (Object.keys(gameState.solved).length === gameState.config.q.length) {
-        document.getElementById('unlock-btn').style.display = 'inline-block';
+    if (allSolved()) {
+        // Všechno hotovo – upozornit hráče, ať najde únikové dveře.
+        const door = document.getElementById('exit-door');
+        if (door) door.classList.add('door-open');
+        const where = gameState.currentRoom === gameState.exitRoom
+            ? 'Únikové dveře jsou v této místnosti.'
+            : 'Najdi v místnostech únikové dveře.';
+        setTimeout(() => showRoomToast(`🎉 Všechny úkoly vyřešené! ${where} Klikni na ně a zadej kód.`), 400);
     }
 }
 
